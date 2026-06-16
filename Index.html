@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="no">
+<title>RC Sales Log</title>
+<style>
+:root {
+  --ink:       #1C1C1E;
+  --ink-soft:  #6B6B6B;
+  --ink-faint: #ADADAD;
+  --bg:        #F5F4F1;
+  --surface:   #FFFFFF;
+  --border:    #E2DDD8;
+  --coral:     #E07055;
+  --coral-dk:  #C45C42;
+  --green:     #2D9E6B;
+  --red:       #DC2626;
+  --radius:    10px;
+  --shadow:    0 2px 8px rgba(0,0,0,0.07);
+  --font:      -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--ink); font-size: 14px; }
+
+.agent-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.agent-card { background: var(--surface); border-radius: 16px; padding: 32px 28px; width: 100%; max-width: 380px; box-shadow: var(--shadow); text-align: center; }
+.agent-logo { width: 56px; height: 56px; background: var(--coral); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; color: white; margin: 0 auto 16px; }
+.agent-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.agent-sub { font-size: 13px; color: var(--ink-soft); margin-bottom: 24px; }
+.agent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+.agent-btn { padding: 12px; background: var(--bg); border: 2px solid var(--border); border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; color: var(--ink); transition: all 0.15s; }
+.agent-btn:hover, .agent-btn.selected { background: var(--coral); border-color: var(--coral); color: white; }
+
+.header { background: var(--ink); color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-logo { width: 30px; height: 30px; background: var(--coral); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; }
+.header-name { font-weight: 600; font-size: 14px; }
+.header-agent { font-size: 11px; color: #aaa; }
+.queue-pill { background: var(--coral); color: white; border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+.main { max-width: 680px; margin: 0 auto; padding: 16px 14px 100px; }
+
+.top-actions { display: flex; gap: 8px; margin-bottom: 16px; }
+.top-action-btn { flex: 1; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink); display: flex; align-items: center; justify-content: center; gap: 6px; }
+.top-action-btn:hover { background: var(--bg); }
+
+.status-bar { padding: 10px 14px; border-radius: var(--radius); font-size: 12px; margin-bottom: 14px; display: none; align-items: center; gap: 8px; }
+.status-bar.visible { display: flex; }
+.status-bar.loading { background: #FDF9F7; border: 1px solid #F0C4B8; color: var(--coral); }
+.status-bar.success { background: #EDF7F2; border: 1px solid #B6E2CF; color: var(--green); }
+.status-bar.error   { background: #FEF3F2; border: 1px solid #FECDCA; color: var(--red); }
+
+.mic-card { background: var(--surface); border: 2px dashed var(--border); border-radius: 14px; padding: 22px 16px; text-align: center; margin-bottom: 12px; transition: all 0.2s; }
+.mic-card.recording { border-color: var(--coral); background: #FDF2EF; }
+.mic-btn { width: 60px; height: 60px; border-radius: 50%; background: var(--coral); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; box-shadow: 0 4px 16px rgba(224,112,85,0.3); transition: all 0.15s; }
+.mic-btn:hover { transform: scale(1.05); background: var(--coral-dk); }
+.mic-btn.recording { background: var(--red); animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100% { box-shadow: 0 4px 16px rgba(220,38,38,0.3); } 50% { box-shadow: 0 4px 24px rgba(220,38,38,0.55); } }
+.mic-label { font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; }
+.rec-timer { font-size: 20px; font-weight: 700; color: var(--red); display: none; }
+.mic-card.recording .rec-timer { display: block; }
+.mic-card.recording .mic-hint { display: none; }
+.mic-hint { font-size: 11px; color: var(--ink-faint); line-height: 1.5; }
+.mic-unsupported { font-size: 12px; color: var(--ink-faint); text-align: center; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; }
+
+.transcript-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; min-height: 56px; font-size: 13px; line-height: 1.6; color: var(--ink-faint); margin-bottom: 10px; }
+.transcript-box.has-text { color: var(--ink); }
+
+.parse-btn { width: 100%; padding: 12px; background: var(--coral); color: white; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
+.parse-btn:hover { background: var(--coral-dk); }
+.parse-btn:disabled { background: var(--border); color: var(--ink-faint); cursor: not-allowed; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
+.card-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-faint); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid1 { display: grid; grid-template-columns: 1fr; gap: 10px; }
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+label { font-size: 11px; font-weight: 500; color: var(--ink-soft); }
+label .req { color: var(--coral); }
+
+input, select, textarea { padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; font-family: var(--font); color: var(--ink); background: var(--surface); width: 100%; transition: border-color 0.15s; -webkit-appearance: none; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--coral); }
+input.ai, textarea.ai { background: #FDF9F7; border-color: #F0C4B8; }
+textarea { resize: vertical; min-height: 60px; }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%236B6B6B' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; padding-right: 26px; }
+
+.req-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.req-chip { font-size: 11px; padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border); background: #F5F4F1; color: var(--ink-soft); }
+.req-chip.ok  { background: #EDF7F2; color: var(--green); border-color: #B6E2CF; }
+.req-chip.bad { background: #FEF3F2; color: var(--red); border-color: #FECDCA; }
+
+.tags { display: flex; flex-wrap: wrap; gap: 7px; }
+.tag { padding: 7px 13px; border-radius: 20px; background: var(--bg); color: var(--ink-soft); font-size: 12px; font-weight: 500; cursor: pointer; border: 1.5px solid var(--border); user-select: none; }
+.tag.active { background: var(--coral); color: white; border-color: var(--coral); }
+
+.scan-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.scan-btn-sm { flex: 1; padding: 9px; background: rgba(224,112,85,0.08); color: var(--coral-dk); border: 1.5px dashed var(--coral); border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+.add-btn { width: 100%; padding: 13px; background: var(--ink); color: white; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 20px; }
+.add-btn:hover { background: #333; }
+
+.queue-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.queue-title { font-size: 13px; font-weight: 600; }
+.submit-btn { padding: 9px 18px; background: var(--green); color: white; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.submit-btn:hover { background: #247A55; }
+.submit-btn:disabled { background: var(--border); color: var(--ink-faint); cursor: not-allowed; }
+
+.empty-queue { text-align: center; padding: 20px; color: var(--ink-faint); font-size: 13px; border: 1px dashed var(--border); border-radius: var(--radius); }
+
+.q-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; }
+.q-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 7px; }
+.q-name { font-weight: 600; font-size: 14px; }
+.q-sub  { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+.q-actions { display: flex; gap: 6px; }
+.q-edit, .q-del { padding: 3px 9px; border-radius: 5px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: var(--bg); color: var(--ink-soft); }
+.q-del { color: var(--red); border-color: #FECDCA; }
+.q-edit:hover { background: var(--ink); color: white; border-color: var(--ink); }
+.q-del:hover  { background: var(--red); color: white; }
+.q-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.q-chip { font-size: 11px; padding: 2px 7px; background: var(--bg); border-radius: 4px; color: var(--ink-soft); }
+
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 10px 22px; border-radius: 28px; font-size: 13px; font-weight: 500; box-shadow: 0 6px 20px rgba(0,0,0,0.18); display: none; z-index: 300; max-width: 90%; text-align: center; }
+.toast.show { display: block; }
+.toast.ok  { background: var(--green); }
+.toast.err { background: var(--red); }
+
+.spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.overlay { position: fixed; inset: 0; background: rgba(28,28,30,0.78); z-index: 999; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 18px; }
+.overlay.active { display: flex; }
+.ospin { width: 46px; height: 46px; border: 4px solid rgba(255,255,255,0.2); border-top-color: var(--coral); border-radius: 50%; animation: spin 0.7s linear infinite; }
+.omsg { color: #fff; font-size: 16px; font-weight: 500; padding: 0 30px; text-align: center; }
+
+.search-wrap { position: relative; margin-bottom: 16px; }
+.search-wrap input { padding-left: 36px; }
+.search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 15px; color: var(--ink-faint); }
+.result-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; cursor: pointer; }
+.result-card:hover { border-left-color: var(--coral); }
+.result-name { font-size: 14px; font-weight: 600; }
+.result-meta { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+.result-id { font-size: 11px; color: var(--ink-faint); margin-top: 3px; }
+
+.period-tabs { display: flex; background: var(--border); border-radius: var(--radius); padding: 3px; margin-bottom: 16px; }
+.ptab { flex: 1; text-align: center; padding: 9px 4px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--ink-soft); cursor: pointer; }
+.ptab.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align: center; }
+.metric-num { font-size: 26px; font-weight: 700; color: var(--ink); }
+.metric-label { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
+.breakdown-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); margin-bottom: 10px; }
+.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.bar-label { font-size: 12px; color: var(--ink); width: 100px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { flex: 1; background: var(--bg); border-radius: 5px; height: 10px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--coral); border-radius: 5px; }
+.bar-count { font-size: 12px; font-weight: 600; color: var(--ink); width: 24px; text-align: right; }
+.no-data { text-align: center; padding: 40px 20px; color: var(--ink-faint); font-size: 13px; }
+
+.back-link { font-size: 13px; color: var(--ink-soft); cursor: pointer; margin-bottom: 14px; display: inline-flex; align-items: center; gap: 4px; }
+.back-link:hover { color: var(--ink); }
+
+@media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<input type="file" id="cardFile" accept="image/*" style="display:none" onchange="handleCardFile(this)">
+
+<div class="overlay" id="overlay">
+  <div class="ospin"></div>
+  <div class="omsg" id="omsg">Working…</div>
+</div>
+
+<!-- AGENT SELECT -->
+<div id="agentScreen" class="agent-screen">
+  <div class="agent-card">
+    <div class="agent-logo">RC</div>
+    <div class="agent-title">RC Sales Log</div>
+    <div class="agent-sub" id="appLoadingMsg">Loading…</div>
+    <div class="agent-grid" id="agentGrid"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="appMain" style="display:none">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="header-logo">RC</div>
+      <div>
+        <div class="header-name">Sales Log</div>
+        <div class="header-agent" id="headerAgent">—</div>
+      </div>
+    </div>
+    <div class="queue-pill" onclick="scrollToQueue()">Queue: <span id="queueCount">0</span></div>
+  </div>
+
+  <div class="main">
+
+    <!-- HOME VIEW -->
+    <div id="view_home">
+      <div class="top-actions">
+        <button class="top-action-btn" onclick="showView('view_search')">🔍 Find &amp; Update</button>
+        <button class="top-action-btn" onclick="showDashboard()">📊 Dashboard</button>
+      </div>
+
+      <div class="status-bar" id="statusBar">
+        <span id="statusIcon">✦</span>
+        <span id="statusText"></span>
+      </div>
+
+      <!-- VOICE -->
+      <div class="mic-card" id="micCard">
+        <button class="mic-btn" id="micBtn" onclick="toggleRec()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
+        <div class="mic-label" id="micLabel">Tap to record</div>
+        <div class="rec-timer" id="recTimer">0:00</div>
+        <div class="mic-hint">Speak naturally — agency, who you met, resorts presented, notes<br>English or Hinglish both work</div>
+      </div>
+      <div class="mic-unsupported" id="micUnsupported" style="display:none">
+        Voice recording isn't supported in this browser. Use Safari (iPhone) or Chrome (Android), or fill the form manually below.
+      </div>
+
+      <div class="transcript-box" id="transcriptBox">Recording will appear here after you stop…</div>
+
+      <button class="parse-btn" id="parseBtn" onclick="parseTranscriptUI()" disabled>
+        <span id="parseBtnText">✦ Parse with AI</span>
+      </button>
+
+      <div class="scan-row">
+        <button class="scan-btn-sm" onclick="triggerCardScan()">📷 Scan Visiting Card</button>
+      </div>
+
+      <div class="req-strip" id="reqStrip"></div>
+
+      <!-- SALES PERSON / ACTIVITY -->
+      <div class="card">
+        <div class="card-title">Visit Details</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Sales Person <span class="req">*</span></label>
+            <select id="f_sp" onchange="updateStrip()"></select>
+          </div>
+          <div class="field">
+            <label>Activity</label>
+            <select id="f_activity">
+              <option value="">Auto-detect</option>
+              <option>Meeting</option><option>Online Meeting</option><option>Call</option>
+              <option>Sales Blitz</option><option>Roadshow</option><option>Event</option><option>Others</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENCY -->
+      <div class="card">
+        <div class="card-title">Agency</div>
+        <div class="grid1">
+          <div class="field">
+            <label>Agency Name <span class="req">*</span></label>
+            <input type="text" id="f_agency" placeholder="Agency name" oninput="updateStrip()">
+          </div>
+        </div>
+        <label style="margin-top:10px;display:block">Agency Type <span style="font-size:10px;color:var(--ink-faint)">tap all that apply</span></label>
+        <div class="tags" id="agencyTypeTags" style="margin-top:6px">
+          <span class="tag" onclick="togM('agency_type','Domestic')">Domestic</span>
+          <span class="tag" onclick="togM('agency_type','Inbound')">Inbound</span>
+          <span class="tag" onclick="togM('agency_type','Outbound')">Outbound</span>
+          <span class="tag" onclick="togM('agency_type','Others')">Others</span>
+        </div>
+        <label style="margin-top:10px;display:block">Speciality <span style="font-size:10px;color:var(--ink-faint)">tap all that apply</span></label>
+        <div class="tags" id="specialityTags" style="margin-top:6px">
+          <span class="tag" onclick="togM('speciality','FIT')">FIT</span>
+          <span class="tag" onclick="togM('speciality','Groups')">Groups</span>
+          <span class="tag" onclick="togM('speciality','Wellness')">Wellness</span>
+          <span class="tag" onclick="togM('speciality','Wildlife')">Wildlife</span>
+          <span class="tag" onclick="togM('speciality','Adventure')">Adventure</span>
+          <span class="tag" onclick="togM('speciality','Others')">Others</span>
+        </div>
+      </div>
+
+      <!-- CONTACT -->
+      <div class="card">
+        <div class="card-title">Contact Details</div>
+        <div class="scan-row">
+          <button class="scan-btn-sm" onclick="triggerCardScan()">📷 Scan Front</button>
+          <button class="scan-btn-sm" onclick="triggerCardScan()">📷 Scan Back</button>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Person(s) Met</label><input type="text" id="f_persons" placeholder="Name(s)"></div>
+          <div class="field"><label>Designation</label><input type="text" id="f_designation" placeholder="Role"></div>
+          <div class="field"><label>Email</label><input type="email" id="f_email" placeholder="email@agency.com"></div>
+          <div class="field"><label>Contact No</label><input type="tel" id="f_phone" placeholder="+91 98100 00000"></div>
+          <div class="field"><label>Location (City)</label><input type="text" id="f_location" placeholder="e.g. Delhi"></div>
+          <div class="field"><label>Address</label><input type="text" id="f_address" placeholder="Office address"></div>
+        </div>
+      </div>
+
+      <!-- RESORTS -->
+      <div class="card">
+        <div class="card-title">Resorts Presented <span style="font-size:10px;color:var(--ink-faint);text-transform:none;font-weight:400">tap to select</span></div>
+        <div class="tags" id="resortTags"></div>
+      </div>
+
+      <!-- NOTES -->
+      <div class="card">
+        <div class="card-title">Notes</div>
+        <textarea id="f_notes" placeholder="Anything else to note…"></textarea>
+      </div>
+
+      <button class="add-btn" id="addBtn" onclick="addToQueue()">+ Add to Queue</button>
+
+      <!-- QUEUE -->
+      <div id="queueSection">
+        <div class="queue-hdr">
+          <div class="queue-title">Queue (<span id="queueCountInline">0</span>)</div>
+          <button class="submit-btn" id="submitBtn" onclick="submitAll()" disabled>✓ Submit All</button>
+        </div>
+        <div id="queueList"><div class="empty-queue">No entries queued yet.</div></div>
+      </div>
+    </div><!-- end view_home -->
+
+    <!-- SEARCH VIEW -->
+    <div id="view_search" style="display:none">
+      <div class="back-link" onclick="showView('view_home')">← Back</div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="searchInput" placeholder="Search by agency name…" oninput="doSearch(this.value)">
+      </div>
+      <div class="card-title" id="searchLabel" style="margin-bottom:10px">Recent Entries</div>
+      <div id="searchResults"></div>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="view_dashboard" style="display:none">
+      <div class="back-link" onclick="showView('view_home')">← Back</div>
+      <div class="period-tabs">
+        <div class="ptab active" onclick="setPeriod('day',this)">Day</div>
+        <div class="ptab" onclick="setPeriod('week',this)">Week</div>
+        <div class="ptab" onclick="setPeriod('month',this)">Month</div>
+        <div class="ptab" onclick="setPeriod('ytd',this)">YTD</div>
+      </div>
+      <div id="dashContent"><div class="no-data">Loading dashboard…</div></div>
+    </div>
+
+  </div><!-- end main -->
+</div><!-- end appMain -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+var GAS_URL = 'PASTE_DEPLOYMENT_URL_HERE';
+
+var RESORTS = [];
+var PERSONS = [];
+var MANDATORY = ['f_sp','f_agency'];
+var MANDATORY_LABELS = { f_sp:'Sales Person', f_agency:'Agency Name' };
+
+var queue = [];
+var editIdx = null;
+var updateMode = false;
+var updateRowIndex = 0;
+var updateEntryId = '';
+var sessionFirstAgent = '';
+
+var isRecording = false;
+var recognition = null;
+var timerInterval = null;
+var recSeconds = 0;
+var finalTranscript = '';
+
+var ms = { agency_type: [], speciality: [], resorts: [] };
+var dashData = null;
+var dashPeriod = 'day';
+
+// ── BACKEND CALL HELPER (GitHub-hosted page → GAS Web App) ─────
+async function callBackend(payload) {
+  var resp = await fetch(GAS_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: { 'Content-Type': 'text/plain' },
+    redirect: 'follow'
+  });
+  var text = await resp.text();
+  try { return JSON.parse(text); }
+  catch(e) { return { success: false, error: 'Bad response: ' + text.substring(0,200) }; }
+}
+
+// ── BOOT ──────────────────────────────────────────────────────
+(async function init() {
+  try {
+    var r = await callBackend({ action: 'getConfig' });
+    boot(r.success ? r.data : fallbackConfig());
+  } catch(e) {
+    boot(fallbackConfig());
+  }
+})();
+
+function fallbackConfig() {
+  return { resorts: ['Singinawa Jungle Lodge','Sariska Lodge','Bijapur Lodge','Banyan By The Ganges'], salesPersons: ['Shivani','Shobha'] };
+}
+
+function boot(cfg) {
+  RESORTS = cfg.resorts || [];
+  PERSONS = cfg.salesPersons || ['Shivani','Shobha'];
+  var grid = document.getElementById('agentGrid');
+  grid.innerHTML = '';
+  PERSONS.forEach(function(p) {
+    var btn = document.createElement('button');
+    btn.className = 'agent-btn';
+    btn.textContent = p;
+    btn.onclick = function(){ selectAgent(p); };
+    grid.appendChild(btn);
+  });
+  document.getElementById('appLoadingMsg').textContent = 'Who is logging activity today?';
+  buildResortTags();
+}
+
+function selectAgent(name) {
+  sessionFirstAgent = name;
+  document.getElementById('agentScreen').style.display = 'none';
+  document.getElementById('appMain').style.display = 'block';
+  document.getElementById('headerAgent').textContent = name;
+  var sel = document.getElementById('f_sp');
+  sel.innerHTML = '';
+  PERSONS.forEach(function(p){ var o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
+  sel.value = name;
+  updateStrip();
+  initSpeech();
+}
+
+// ── VIEW SWITCHING ────────────────────────────────────────────
+function showView(id) {
+  if (isRecording) stopRec();
+  ['view_home','view_search','view_dashboard'].forEach(function(v){
+    document.getElementById(v).style.display = (v===id) ? 'block' : 'none';
+  });
+  window.scrollTo(0,0);
+}
+
+function scrollToQueue(){ showView('view_home'); document.getElementById('queueSection').scrollIntoView({behavior:'smooth'}); }
+
+// ── VOICE RECORDING ───────────────────────────────────────────
+function initSpeech() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    document.getElementById('micCard').style.display = 'none';
+    document.getElementById('micUnsupported').style.display = 'block';
+    return;
+  }
+}
+
+function toggleRec() {
+  if (isRecording) stopRec(); else startRec();
+}
+
+function startRec() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showToast('Speech recognition not supported on this browser.', 'err'); return; }
+
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-IN';
+  finalTranscript = '';
+
+  recognition.onresult = function(e) {
+    var interim = '';
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript + ' ';
+      else interim += e.results[i][0].transcript;
+    }
+    var box = document.getElementById('transcriptBox');
+    box.textContent = finalTranscript + interim;
+    box.classList.add('has-text');
+  };
+
+  recognition.onerror = function(e) {
+    if (e.error === 'no-speech') return;
+    if (e.error === 'not-allowed' || e.error === 'permission-denied') {
+      showToast('Microphone permission denied. Allow mic access for this site in browser settings, then reload.', 'err');
+    } else if (e.error !== 'aborted') {
+      showToast('Mic error: ' + e.error, 'err');
+    }
+    stopRec();
+  };
+
+  recognition.onend = function() {
+    if (isRecording) {
+      try { recognition.start(); } catch(e) { stopRec(); }
+    }
+  };
+
+  try {
+    recognition.start();
+  } catch(e) {
+    showToast('Could not start recording — tap mic again.', 'err');
+    return;
+  }
+
+  isRecording = true;
+  recSeconds = 0;
+  document.getElementById('micBtn').classList.add('recording');
+  document.getElementById('micCard').classList.add('recording');
+  document.getElementById('micLabel').textContent = 'Recording… tap to stop';
+  document.getElementById('parseBtn').disabled = true;
+
+  timerInterval = setInterval(function() {
+    recSeconds++;
+    var m = Math.floor(recSeconds/60), s = recSeconds%60;
+    document.getElementById('recTimer').textContent = m + ':' + (s<10?'0':'') + s;
+  }, 1000);
+}
+
+function stopRec() {
+  if (recognition) { recognition.onend = null; try{ recognition.stop(); }catch(e){} }
+  isRecording = false;
+  clearInterval(timerInterval);
+  document.getElementById('micBtn').classList.remove('recording');
+  document.getElementById('micCard').classList.remove('recording');
+  document.getElementById('micLabel').textContent = 'Tap to record';
+  if (finalTranscript.trim()) {
+    document.getElementById('transcriptBox').textContent = finalTranscript.trim();
+    document.getElementById('transcriptBox').classList.add('has-text');
+    document.getElementById('parseBtn').disabled = false;
+  }
+}
+
+// ── PARSE TRANSCRIPT ──────────────────────────────────────────
+function parseTranscriptUI() {
+  var transcript = finalTranscript.trim() || document.getElementById('transcriptBox').textContent.trim();
+  if (!transcript || transcript.startsWith('Recording')) { showToast('No transcript yet — record first', 'err'); return; }
+  var sp = document.getElementById('f_sp').value;
+  if (!sp) { showToast('Select sales person first', 'err'); return; }
+
+  setStatus('loading', 'Parsing with Claude AI…');
+  document.getElementById('parseBtnText').innerHTML = '<span class="spinner"></span> Parsing…';
+  document.getElementById('parseBtn').disabled = true;
+  callParse(transcript, 0);
+}
+
+function callParse(tx, attempt) {
+  callBackend({ action: 'parseTranscript', transcript: tx }).then(function(r) {
+    if (r.success) {
+      fillFromParse(r.data, false);
+      setStatus('success', 'Parsed — review and correct below');
+      document.getElementById('parseBtnText').textContent = '✦ Parse with AI';
+      document.getElementById('parseBtn').disabled = false;
+    } else {
+      handleParseFailure(tx, attempt, r.error);
+    }
+  }).catch(function(e) {
+    handleParseFailure(tx, attempt, e.message || String(e));
+  });
+}
+
+function handleParseFailure(tx, attempt, errMsg) {
+  if (attempt === 0) {
+    setStatus('loading', 'Retrying…');
+    setTimeout(function(){ callParse(tx, 1); }, 2500);
+  } else {
+    setStatus('error', 'Parse failed: ' + errMsg);
+    document.getElementById('parseBtnText').textContent = '✦ Parse with AI';
+    document.getElementById('parseBtn').disabled = false;
+  }
+}
+
+function fillFromParse(d, isCard) {
+  var map = {
+    f_activity: d.activity, f_agency: d.agency_name,
+    f_persons: d.persons_met, f_designation: d.designation,
+    f_email: d.email, f_phone: d.phone,
+    f_location: d.location, f_address: d.address,
+    f_notes: d.notes
+  };
+  for (var id in map) {
+    var el = document.getElementById(id);
+    if (el && map[id] && !el.value) { el.value = map[id]; el.classList.add('ai'); }
+  }
+  if (d.agency_type && d.agency_type.length) {
+    d.agency_type.forEach(function(t){ if (ms.agency_type.indexOf(t)<0) ms.agency_type.push(t); });
+    rTags('agency_type');
+  }
+  if (d.speciality && d.speciality.length) {
+    d.speciality.forEach(function(t){ if (ms.speciality.indexOf(t)<0) ms.speciality.push(t); });
+    rTags('speciality');
+  }
+  if (d.resorts_presented && d.resorts_presented.length) {
+    d.resorts_presented.forEach(function(r) {
+      var m = RESORTS.find(function(n){ return n.toLowerCase().indexOf((r||'').toLowerCase().split(' ')[0]) >= 0; });
+      if (m && ms.resorts.indexOf(m) < 0) ms.resorts.push(m);
+    });
+    buildResortTags();
+  }
+  updateStrip();
+}
+
+// ── VISITING CARD SCAN ────────────────────────────────────────
+function triggerCardScan() {
+  var fi = document.getElementById('cardFile'); fi.value=''; fi.click();
+}
+
+function handleCardFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  if (file.size > 4*1024*1024) { showToast('Image too large — use a photo under 4MB.', 'err'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var base64 = e.target.result.split(',')[1];
+    var mime = file.type || 'image/jpeg';
+    ov(true, 'Reading card…');
+    callCard(base64, mime, 0);
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function callCard(base64, mime, attempt) {
+  callBackend({ action: 'parseCard', imageBase64: base64, mimeType: mime }).then(function(r) {
+    if (r.success) {
+      ov(false);
+      mergeCardData(r.data);
+      showToast('Card scanned — fields filled below', 'ok');
+    } else {
+      handleCardFailure(base64, mime, attempt, r.error);
+    }
+  }).catch(function(e) {
+    handleCardFailure(base64, mime, attempt, e.message || String(e));
+  });
+}
+
+function handleCardFailure(base64, mime, attempt, errMsg) {
+  if (attempt === 0) { setTimeout(function(){ callCard(base64, mime, 1); }, 2500); }
+  else { ov(false); showToast('Card scan failed: ' + errMsg, 'err'); }
+}
+
+function mergeCardData(d) {
+  var map = {
+    f_agency: d.agency_name, f_persons: d.persons_met, f_designation: d.designation,
+    f_email: d.email, f_phone: d.phone, f_address: d.address
+  };
+  for (var id in map) {
+    var el = document.getElementById(id);
+    if (el && map[id] && !el.value) { el.value = map[id]; el.classList.add('ai'); }
+  }
+  if (d.agency_type && d.agency_type.length) {
+    d.agency_type.forEach(function(t){ if (ms.agency_type.indexOf(t)<0) ms.agency_type.push(t); });
+    rTags('agency_type');
+  }
+  updateStrip();
+}
+
+// ── TAGS / MULTI-SELECT ───────────────────────────────────────
+function buildResortTags() {
+  document.getElementById('resortTags').innerHTML = RESORTS.map(function(r) {
+    var a = ms.resorts.indexOf(r) >= 0 ? 'tag active' : 'tag';
+    return '<span class="' + a + '" onclick="togM(\'resorts\',\'' + r.replace(/'/g,"\\'") + '\')">' + r + '</span>';
+  }).join('');
+}
+
+function togM(key, val) {
+  var a = ms[key], i = a.indexOf(val);
+  i >= 0 ? a.splice(i,1) : a.push(val);
+  if (key === 'resorts') { buildResortTags(); return; }
+  rTags(key);
+}
+
+function rTags(key) {
+  var id = key === 'agency_type' ? 'agencyTypeTags' : 'specialityTags';
+  document.getElementById(id).querySelectorAll('.tag').forEach(function(t) {
+    t.classList.toggle('active', ms[key].indexOf(t.textContent) >= 0);
+  });
+}
+
+// ── MANDATORY STRIP ───────────────────────────────────────────
+function updateStrip() {
+  var strip = document.getElementById('reqStrip');
+  strip.innerHTML = '';
+  MANDATORY.forEach(function(id) {
+    var val = document.getElementById(id).value.trim();
+    var chip = document.createElement('div');
+    chip.className = 'req-chip ' + (val ? 'ok' : 'bad');
+    chip.textContent = (val ? '✓ ' : '○ ') + MANDATORY_LABELS[id];
+    strip.appendChild(chip);
+  });
+}
+
+function setStatus(type, text) {
+  var bar = document.getElementById('statusBar');
+  bar.className = 'status-bar visible ' + type;
+  document.getElementById('statusIcon').textContent = type==='loading' ? '⟳' : type==='error' ? '✕' : '✓';
+  document.getElementById('statusText').textContent = text;
+}
+
+// ── COLLECT / CLEAR FORM ──────────────────────────────────────
+function collectForm() {
+  var now = new Date();
+  return {
+    timestamp: now.toISOString(),
+    date: now.toISOString().split('T')[0],
+    sales_person: v('f_sp'),
+    activity: v('f_activity') || 'Meeting',
+    agency_name: v('f_agency'),
+    agency_type: ms.agency_type.join(', '),
+    speciality: ms.speciality.join(', '),
+    persons_met: v('f_persons'),
+    designation: v('f_designation'),
+    email: v('f_email'),
+    phone: v('f_phone'),
+    location: v('f_location'),
+    address: v('f_address'),
+    resorts_presented: ms.resorts.join(', '),
+    notes: v('f_notes'),
+    transcript: finalTranscript.trim() || document.getElementById('transcriptBox').textContent.trim(),
+    entry_id: updateEntryId || ''
+  };
+}
+
+function v(id) { return document.getElementById(id).value; }
+
+function clearForm() {
+  ['f_agency','f_persons','f_designation','f_email','f_phone','f_location','f_address','f_notes'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.value = ''; el.classList.remove('ai'); }
+  });
+  document.getElementById('f_activity').value = '';
+  document.getElementById('f_sp').value = sessionFirstAgent;
+  ms = { agency_type: [], speciality: [], resorts: [] };
+  rTags('agency_type'); rTags('speciality'); buildResortTags();
+  document.getElementById('statusBar').className = 'status-bar';
+  finalTranscript = '';
+  document.getElementById('transcriptBox').textContent = 'Recording will appear here after you stop…';
+  document.getElementById('transcriptBox').classList.remove('has-text');
+  document.getElementById('parseBtn').disabled = true;
+  updateMode = false; updateRowIndex = 0; updateEntryId = '';
+  document.getElementById('addBtn').textContent = '+ Add to Queue';
+  updateStrip();
+}
+
+// ── QUEUE ─────────────────────────────────────────────────────
+function addToQueue() {
+  var missing = MANDATORY.filter(function(id){ return !document.getElementById(id).value.trim(); });
+  if (missing.length) {
+    showToast('Fill required: ' + missing.map(function(id){ return MANDATORY_LABELS[id]; }).join(', '), 'err');
+    return;
+  }
+  var entry = collectForm();
+
+  if (updateMode) {
+    submitUpdate(entry);
+    return;
+  }
+
+  if (editIdx !== null) { queue[editIdx] = entry; editIdx = null; }
+  else { queue.push(entry); }
+
+  clearForm();
+  renderQueue();
+  showToast('Added to queue (' + queue.length + ')', 'ok');
+  document.getElementById('queueSection').scrollIntoView({behavior:'smooth'});
+}
+
+function renderQueue() {
+  var n = queue.length;
+  document.getElementById('queueCount').textContent = n;
+  document.getElementById('queueCountInline').textContent = n;
+  document.getElementById('submitBtn').disabled = n === 0;
+  var list = document.getElementById('queueList');
+  if (n === 0) { list.innerHTML = '<div class="empty-queue">No entries queued yet.</div>'; return; }
+  list.innerHTML = '';
+  queue.forEach(function(e, i) {
+    var chips = [];
+    if (e.activity) chips.push('<span class="q-chip">' + e.activity + '</span>');
+    (e.agency_type||'').split(', ').forEach(function(t){ if (t.trim()) chips.push('<span class="q-chip">'+t.trim()+'</span>'); });
+    (e.resorts_presented||'').split(', ').forEach(function(r){ if (r.trim()) chips.push('<span class="q-chip">'+r.trim().split(' ')[0]+'</span>'); });
+    list.innerHTML +=
+      '<div class="q-card"><div class="q-card-top">' +
+        '<div><div class="q-name">' + (i+1) + '. ' + (e.agency_name||'Unknown Agency') + '</div>' +
+        '<div class="q-sub">' + (e.persons_met||'') + (e.location?' · '+e.location:'') + '<br>' + (e.sales_person||'') + '</div></div>' +
+        '<div class="q-actions"><button class="q-edit" onclick="editQueueEntry(' + i + ')">Edit</button>' +
+        '<button class="q-del" onclick="delEntry(' + i + ')">Delete</button></div>' +
+      '</div><div class="q-chips">' + chips.join('') + '</div></div>';
+  });
+}
+
+function delEntry(i) {
+  if (!confirm('Delete this entry?')) return;
+  queue.splice(i,1);
+  if (editIdx === i) { editIdx = null; document.getElementById('addBtn').textContent = '+ Add to Queue'; }
+  renderQueue();
+}
+
+function editQueueEntry(i) {
+  var e = queue[i];
+  loadIntoForm(e);
+  editIdx = i; updateMode = false;
+  document.getElementById('addBtn').textContent = '✓ Update Entry #' + (i+1);
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function loadIntoForm(e) {
+  document.getElementById('f_sp').value = e.sales_person || sessionFirstAgent;
+  document.getElementById('f_activity').value = e.activity || '';
+  document.getElementById('f_agency').value = e.agency_name || '';
+  document.getElementById('f_persons').value = e.persons_met || '';
+  document.getElementById('f_designation').value = e.designation || '';
+  document.getElementById('f_email').value = e.email || '';
+  document.getElementById('f_phone').value = e.phone || '';
+  document.getElementById('f_location').value = e.location || '';
+  document.getElementById('f_address').value = e.address || '';
+  document.getElementById('f_notes').value = e.notes || '';
+  ms.agency_type = (e.agency_type||'').split(', ').filter(Boolean);
+  ms.speciality = (e.speciality||'').split(', ').filter(Boolean);
+  ms.resorts = (e.resorts_presented||'').split(', ').filter(Boolean);
+  rTags('agency_type'); rTags('speciality'); buildResortTags();
+  finalTranscript = e.transcript || '';
+  var box = document.getElementById('transcriptBox');
+  if (finalTranscript) { box.textContent = finalTranscript; box.classList.add('has-text'); document.getElementById('parseBtn').disabled = false; }
+  else { box.textContent = 'Recording will appear here after you stop…'; box.classList.remove('has-text'); }
+  updateStrip();
+}
+
+// ── SUBMIT ALL (new entries) ─────────────────────────────────
+function submitAll() {
+  if (!queue.length) return;
+  if (!confirm('Submit ' + queue.length + ' entr' + (queue.length===1?'y':'ies') + ' to Sales Log?')) return;
+  ov(true, 'Saving ' + queue.length + ' entr' + (queue.length===1?'y':'ies') + '…');
+  callBackend({ action: 'submitEntries', entries: queue }).then(function(r) {
+    ov(false);
+    if (r.success) {
+      showToast('✓ ' + r.data.count + ' entr' + (r.data.count===1?'y':'ies') + ' submitted!', 'ok');
+      queue = []; renderQueue();
+      dashData = null;
+    } else {
+      showToast('Submit failed: ' + r.error, 'err');
+    }
+  }).catch(function(e) { ov(false); showToast('Submit failed: ' + (e.message||String(e)), 'err'); });
+}
+
+// ── FIND & UPDATE ─────────────────────────────────────────────
+function doSearch(q) {
+  if (!q || q.length === 0) {
+    document.getElementById('searchLabel').textContent = 'Recent Entries';
+    loadRecent();
+    return;
+  }
+  if (q.length < 2) return;
+  document.getElementById('searchLabel').textContent = 'Search Results';
+  callBackend({ action: 'searchEntries', query: q }).then(function(r) {
+    renderSearchResults(r.success ? r.data : []);
+  }).catch(function(){ renderSearchResults([]); });
+}
+
+function loadRecent() {
+  document.getElementById('searchResults').innerHTML = '<div class="no-data">Loading…</div>';
+  callBackend({ action: 'getRecentEntries' }).then(function(r) {
+    if (r.success) renderSearchResults(r.data);
+    else document.getElementById('searchResults').innerHTML = '<div class="no-data">Could not load entries.</div>';
+  }).catch(function(){ document.getElementById('searchResults').innerHTML = '<div class="no-data">Could not load entries.</div>'; });
+}
+
+function renderSearchResults(results) {
+  var c = document.getElementById('searchResults');
+  if (!results || !results.length) { c.innerHTML = '<div class="no-data">No entries found.</div>'; return; }
+  c.innerHTML = results.map(function(r) {
+    return '<div class="result-card" onclick="loadEntryForUpdate(' + r.rowIndex + ')">' +
+      '<div class="result-name">' + (r.agency_name||'Unknown Agency') + '</div>' +
+      '<div class="result-meta">' + (r.persons_met||'') + (r.location?' · '+r.location:'') + ' · ' + (r.sales_person||'') +
+      '<span style="float:right">' + (r.date||'') + '</span></div>' +
+      (r.entry_id ? '<div class="result-id">' + r.entry_id + '</div>' : '') + '</div>';
+  }).join('');
+}
+
+function loadEntryForUpdate(rowIndex) {
+  ov(true, 'Loading entry…');
+  callBackend({ action: 'getEntryByRow', rowIndex: rowIndex }).then(function(r) {
+    ov(false);
+    if (!r.success) { showToast('Could not load entry: ' + r.error, 'err'); return; }
+    var e = r.data;
+    updateMode = true; updateRowIndex = rowIndex; updateEntryId = e.entry_id || '';
+    loadIntoForm(e);
+    document.getElementById('addBtn').textContent = '✓ Update Entry' + (e.entry_id ? ' · ' + e.entry_id : '');
+    showView('view_home');
+    showToast('Loaded — edit fields then tap Update Entry', 'ok');
+    window.scrollTo({top:0, behavior:'smooth'});
+  }).catch(function(e) { ov(false); showToast('Could not load entry: ' + (e.message||String(e)), 'err'); });
+}
+
+function submitUpdate(entry) {
+  entry.entry_id = updateEntryId;
+  ov(true, 'Updating entry…');
+  callBackend({ action: 'updateEntry', rowIndex: updateRowIndex, data: entry }).then(function(r) {
+    ov(false);
+    if (r.success) {
+      showToast('Entry updated in Google Sheets', 'ok');
+      clearForm();
+      dashData = null;
+    } else {
+      showToast('Update failed: ' + r.error, 'err');
+    }
+  }).catch(function(e) { ov(false); showToast('Update failed: ' + (e.message||String(e)), 'err'); });
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+function showDashboard() {
+  showView('view_dashboard');
+  if (dashData) { renderDash(); return; }
+  ov(true, 'Loading dashboard…');
+  callBackend({ action: 'getDashboardData' }).then(function(r) {
+    ov(false);
+    if (r.success) { dashData = r.data; renderDash(); }
+    else { document.getElementById('dashContent').innerHTML = '<div class="no-data">Could not load data.</div>'; }
+  }).catch(function() { ov(false); document.getElementById('dashContent').innerHTML = '<div class="no-data">Could not load data.</div>'; });
+}
+
+function setPeriod(p, el) {
+  dashPeriod = p;
+  document.querySelectorAll('.ptab').forEach(function(t){ t.classList.remove('active'); });
+  el.classList.add('active');
+  renderDash();
+}
+
+function renderDash() {
+  if (!dashData || !dashData.entries || !dashData.entries.length) {
+    document.getElementById('dashContent').innerHTML = '<div class="no-data">No data yet.<br>Submit some entries first.</div>';
+    return;
+  }
+  var now = new Date();
+  var todayStr = fmt(now);
+  var ws = new Date(now); ws.setDate(now.getDate()-now.getDay()+1); var weekStr = fmt(ws);
+  var monthStr = now.getFullYear()+'-'+pad(now.getMonth()+1);
+  var yearStr = now.getFullYear().toString();
+  var filtered = dashData.entries.filter(function(e) {
+    if (dashPeriod==='day') return e.date===todayStr;
+    if (dashPeriod==='week') return e.date>=weekStr;
+    if (dashPeriod==='month') return e.date.startsWith(monthStr);
+    if (dashPeriod==='ytd') return e.date.startsWith(yearStr);
+    return true;
+  });
+  if (!filtered.length) { document.getElementById('dashContent').innerHTML = '<div class="no-data">No entries for this period.</div>'; return; }
+  var total = filtered.length;
+  var agencies={}, sps={}, resorts={}, types={}, specs={}, acts={};
+  filtered.forEach(function(e) {
+    if (e.agency_name) agencies[e.agency_name]=(agencies[e.agency_name]||0)+1;
+    if (e.sales_person) sps[e.sales_person]=(sps[e.sales_person]||0)+1;
+    if (e.activity) acts[e.activity]=(acts[e.activity]||0)+1;
+    (e.resorts_presented||'').split(', ').forEach(function(r){ if (r.trim()){ var k=r.trim().split(' ')[0]; resorts[k]=(resorts[k]||0)+1; } });
+    (e.agency_type||'').split(', ').forEach(function(t){ if (t.trim()) types[t.trim()]=(types[t.trim()]||0)+1; });
+    (e.speciality||'').split(', ').forEach(function(s){ if (s.trim()) specs[s.trim()]=(specs[s.trim()]||0)+1; });
+  });
+  var html = '<div class="metrics-grid">' +
+    '<div class="metric-card"><div class="metric-num">'+total+'</div><div class="metric-label">Total Activities</div></div>' +
+    '<div class="metric-card"><div class="metric-num">'+Object.keys(agencies).length+'</div><div class="metric-label">Agencies Met</div></div></div>';
+  html += bars('By Salesperson', sps);
+  html += bars('Activity Type', acts);
+  html += bars('Top Resorts', resorts);
+  html += bars('Agency Type', types);
+  html += bars('Speciality', specs);
+  document.getElementById('dashContent').innerHTML = html;
+}
+
+function bars(title, obj) {
+  var keys = Object.keys(obj);
+  if (!keys.length) return '';
+  keys.sort(function(a,b){ return obj[b]-obj[a]; });
+  var max = obj[keys[0]] || 1;
+  var rows = keys.slice(0,6).map(function(k) {
+    return '<div class="bar-row"><div class="bar-label">'+k+'</div>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:'+Math.round((obj[k]/max)*100)+'%"></div></div>' +
+      '<div class="bar-count">'+obj[k]+'</div></div>';
+  }).join('');
+  return '<div class="card"><div class="breakdown-title">'+title+'</div>'+rows+'</div>';
+}
+
+function fmt(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function pad(n){ return n<10 ? '0'+n : String(n); }
+
+// ── HELPERS ───────────────────────────────────────────────────
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type||'');
+  setTimeout(function(){ t.className = 'toast'; }, 3500);
+}
+
+function ov(on, msg) {
+  document.getElementById('overlay').classList.toggle('active', on);
+  if (msg) document.getElementById('omsg').textContent = msg;
+}
+</script>
+</body>
+</html>
