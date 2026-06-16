@@ -247,6 +247,10 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
         <div class="card-title">Visit Details</div>
         <div class="grid2">
           <div class="field">
+            <label>Activity Date</label>
+            <input type="date" id="f_activity_date">
+          </div>
+          <div class="field">
             <label>Sales Person <span class="req">*</span></label>
             <select id="f_sp" onchange="updateStrip()"></select>
           </div>
@@ -358,7 +362,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 <div class="toast" id="toast"></div>
 
 <script>
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbxaXKGLu-StivpPr9Vi_wsxxZqQkGQYQusz2Nj9RaZrDn8ZEf9moX8B9VfCWz1QIezwDQ/exec';
+var GAS_URL = 'PASTE_DEPLOYMENT_URL_HERE';
 
 var RESORTS = [];
 var PERSONS = [];
@@ -425,6 +429,11 @@ function boot(cfg) {
   buildResortTags();
 }
 
+function todayISO() {
+  var d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
 function selectAgent(name) {
   sessionFirstAgent = name;
   document.getElementById('agentScreen').style.display = 'none';
@@ -434,6 +443,7 @@ function selectAgent(name) {
   sel.innerHTML = '';
   PERSONS.forEach(function(p){ var o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
   sel.value = name;
+  document.getElementById('f_activity_date').value = todayISO();
   updateStrip();
   initSpeech();
 }
@@ -704,9 +714,10 @@ function setStatus(type, text) {
 // ── COLLECT / CLEAR FORM ──────────────────────────────────────
 function collectForm() {
   var now = new Date();
+  var activityDate = v('f_activity_date') || todayISO();
   return {
     timestamp: now.toISOString(),
-    date: now.toISOString().split('T')[0],
+    date: activityDate,
     sales_person: v('f_sp'),
     activity: v('f_activity') || 'Meeting',
     agency_name: v('f_agency'),
@@ -733,6 +744,7 @@ function clearForm() {
     if (el) { el.value = ''; el.classList.remove('ai'); }
   });
   document.getElementById('f_activity').value = '';
+  document.getElementById('f_activity_date').value = todayISO();
   document.getElementById('f_sp').value = sessionFirstAgent;
   ms = { agency_type: [], speciality: [], resorts: [] };
   rTags('agency_type'); rTags('speciality'); buildResortTags();
@@ -779,6 +791,7 @@ function renderQueue() {
   list.innerHTML = '';
   queue.forEach(function(e, i) {
     var chips = [];
+    if (e.date) chips.push('<span class="q-chip">' + fmtDateDisplay(e.date) + '</span>');
     if (e.activity) chips.push('<span class="q-chip">' + e.activity + '</span>');
     (e.agency_type||'').split(', ').forEach(function(t){ if (t.trim()) chips.push('<span class="q-chip">'+t.trim()+'</span>'); });
     (e.resorts_presented||'').split(', ').forEach(function(r){ if (r.trim()) chips.push('<span class="q-chip">'+r.trim().split(' ')[0]+'</span>'); });
@@ -810,6 +823,7 @@ function editQueueEntry(i) {
 function loadIntoForm(e) {
   document.getElementById('f_sp').value = e.sales_person || sessionFirstAgent;
   document.getElementById('f_activity').value = e.activity || '';
+  document.getElementById('f_activity_date').value = e.date || todayISO();
   document.getElementById('f_agency').value = e.agency_name || '';
   document.getElementById('f_persons').value = e.persons_met || '';
   document.getElementById('f_designation').value = e.designation || '';
@@ -982,6 +996,11 @@ function bars(title, obj) {
 }
 
 function fmt(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function fmtDateDisplay(iso){
+  if (!iso) return '';
+  var p = iso.split('-');
+  return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : iso;
+}
 function pad(n){ return n<10 ? '0'+n : String(n); }
 
 // ── HELPERS ───────────────────────────────────────────────────
